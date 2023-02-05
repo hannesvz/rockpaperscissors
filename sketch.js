@@ -244,7 +244,7 @@ function check_for_winners() {
 }
 
 function windowResized() {
-  resizeCanvas(window.innerWidth, window.innerHeight);
+  resizeCanvas(window.innerWidth-1, window.innerHeight-1);
 }
 
 function reset_scene() {
