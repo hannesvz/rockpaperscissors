@@ -1,5 +1,9 @@
 let is_mobile = Math.min(window.screen.width, window.screen.height) < 768 || navigator.userAgent.indexOf("Mobi") > -1;
 
+console.log('is_mobile ' + is_mobile);
+
+console.log(window.screen.width, window.screen.height);
+
 let screen_size = window.innerWidth * window.innerHeight;
 
 const top_border = 60;
