@@ -244,7 +244,9 @@ function check_for_winners() {
 }
 
 function windowResized() {
-  resizeCanvas(window.innerWidth-1, window.innerHeight-1);
+  newsize_x = window.innerWidth;
+  newsize_y = window.innerHeight;
+  resizeCanvas(newsize_x, newsize_y);
 }
 
 function reset_scene() {
@@ -286,9 +288,7 @@ function setup() {
   push();
   textSize(header_text_size);
   scoreboard_offset = textWidth('Rock Paper Scissors');
-  console.log(scoreboard_offset);
   pop();
-
 }
 
 function draw() {
