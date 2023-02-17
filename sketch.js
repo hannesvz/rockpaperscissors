@@ -13,6 +13,8 @@ let scoreboard_offset;
 
 let max_mobs;
 
+const mobile_max_mobs_factor = 0.4;
+
 let run_timer = 0;
 let run_start_time = 0;
 let win_timer_mark = 0;
@@ -260,7 +262,7 @@ function reset_scene() {
   
   max_mobs = int(screen_size / max_mob_modifier);
   if (is_mobile) {
-    max_mobs = int(max_mobs * 0.5);
+    max_mobs = int(max_mobs * mobile_max_mobs_factor);
   }
   // initialize the list of mobs
   mobs = [];
