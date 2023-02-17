@@ -7,7 +7,7 @@ console.log(window.screen.width, window.screen.height);
 let screen_size = window.innerWidth * window.innerHeight;
 
 const top_border = 60;
-const header_text_size = is_mobile ? 24 : 24;
+const header_text_size = is_mobile ? 32 : 24;
 
 let scoreboard_offset;
 
@@ -29,7 +29,7 @@ let winner_emoji = '';
 let background_alpha = 255;
 let mobs;
 let explosions = [];
-const emoji_size = is_mobile ? 52 : 28;
+const emoji_size = is_mobile ? 60 : 28;
 const explosion_start_size = emoji_size * 1.5;
 const explosion_decay = 3;
 
@@ -260,7 +260,7 @@ function reset_scene() {
   
   max_mobs = int(screen_size / max_mob_modifier);
   if (is_mobile) {
-    max_mobs = int(max_mobs * 0.2);
+    max_mobs = int(max_mobs * 0.75);
   }
   // initialize the list of mobs
   mobs = [];
@@ -359,7 +359,6 @@ function draw() {
   fill(255, 255, 255);
   textAlign(LEFT);
   text('Rock Paper Scissors', 10, 40);
-  //text(max_mobs + ' ' + is_mobile, 10, 40);
   pop();
 
   push();
