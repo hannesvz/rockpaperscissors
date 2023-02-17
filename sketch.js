@@ -357,8 +357,8 @@ function draw() {
   textSize(header_text_size);
   fill(255, 255, 255);
   textAlign(LEFT);
-  //text('Rock Paper Scissors', 10, 40);
-  text(max_mobs + ' ' + is_mobile, 10, 40);
+  text('Rock Paper Scissors', 10, 40);
+  //text(max_mobs + ' ' + is_mobile, 10, 40);
   pop();
 
   push();
