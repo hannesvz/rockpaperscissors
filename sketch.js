@@ -7,7 +7,7 @@ console.log(window.screen.width, window.screen.height);
 let screen_size = window.innerWidth * window.innerHeight;
 
 const top_border = 60;
-const header_text_size = is_mobile ? 18 : 32;
+const header_text_size = is_mobile ? 24 : 24;
 
 let scoreboard_offset;
 
@@ -29,7 +29,7 @@ let winner_emoji = '';
 let background_alpha = 255;
 let mobs;
 let explosions = [];
-const emoji_size = is_mobile ? 24 : 48;
+const emoji_size = is_mobile ? 32 : 32;
 const explosion_start_size = emoji_size * 1.5;
 const explosion_decay = 3;
 
