@@ -29,7 +29,7 @@ let winner_emoji = '';
 let background_alpha = 255;
 let mobs;
 let explosions = [];
-const emoji_size = is_mobile ? 32 : 32;
+const emoji_size = is_mobile ? 48 : 32;
 const explosion_start_size = emoji_size * 1.5;
 const explosion_decay = 3;
 
@@ -259,7 +259,7 @@ function reset_scene() {
   winner_emoji = '';
   
   max_mobs = int(screen_size / max_mob_modifier);
-  //if (is_mobile) max_mobs *= 1.5;
+  if (is_mobile) max_mobs = int(max_mobs * 0.75);
   // initialize the list of mobs
   mobs = [];
   for (let id = 0; id < max_mobs; id++) {
