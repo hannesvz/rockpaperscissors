@@ -259,7 +259,9 @@ function reset_scene() {
   winner_emoji = '';
   
   max_mobs = int(screen_size / max_mob_modifier);
-  if (is_mobile) max_mobs = int(max_mobs * 0.5);
+  if (is_mobile) {
+    max_mobs = int(max_mobs * 0.2);
+  }
   // initialize the list of mobs
   mobs = [];
   for (let id = 0; id < max_mobs; id++) {
