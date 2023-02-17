@@ -1,9 +1,5 @@
 let is_mobile = Math.min(window.screen.width, window.screen.height) < 768 || navigator.userAgent.indexOf("Mobi") > -1;
 
-console.log('is_mobile ' + is_mobile);
-
-console.log(window.screen.width, window.screen.height);
-
 let screen_size = window.innerWidth * window.innerHeight;
 
 const top_border = 60;
@@ -111,6 +107,9 @@ class Mob {
     let friends = [];
     for (let m of mobs) {
       if (m.id == this.id) continue;
+      // and poor man's distance optimization
+      if (abs(m.pos.x - this.pos.x) > perception_distance) continue;
+      if (abs(m.pos.y - this.pos.y) > perception_distance) continue;
       if (m.type == this.type) {
         const friend_distance = this.pos.dist(m.pos);
         if (friend_distance < perception_distance) { // only act on mobs within perception_distance
@@ -362,11 +361,11 @@ function draw() {
   textSize(header_text_size);
   fill(255, 255, 255);
   textAlign(LEFT);
-  text('Rock Paper Scissors', 10, 40);
+  text('Rock Paper Scissors ' + int(frameRate()), 10, 40);
   pop();
 
   push();
-  textSize(header_text_size * (is_mobile ? 0.5 : 0.5));
+  textSize(header_text_size * (is_mobile ? 0.6 : 0.6));
   textAlign(LEFT);
   fill(255, 255, 255);
   scoreboard_text = '';
