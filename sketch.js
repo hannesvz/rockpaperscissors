@@ -27,7 +27,7 @@ let winner_emoji = '';
 let background_alpha = 255;
 let mobs;
 let explosions = [];
-const emoji_size = is_mobile ? 68 : 28;
+const emoji_size = is_mobile ? 72 : 28;
 const explosion_start_size = emoji_size * 1.5;
 const explosion_decay = 3;
 
@@ -361,7 +361,7 @@ function draw() {
   textSize(header_text_size);
   fill(255, 255, 255);
   textAlign(LEFT);
-  text('Rock Paper Scissors ' + int(frameRate()), 10, 40);
+  text('Rock Paper Scissors', 10, 40);
   pop();
 
   push();
