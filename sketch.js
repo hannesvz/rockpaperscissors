@@ -13,7 +13,7 @@ let scoreboard_offset;
 
 let max_mobs;
 
-const mobile_max_mobs_factor = 0.4;
+const mobile_max_mobs_factor = 0.35;
 
 let run_timer = 0;
 let run_start_time = 0;
