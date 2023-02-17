@@ -281,7 +281,9 @@ function preload() {
 
 function setup() {
   frameRate(60);
-  pixelDensity(1);
+  if (is_mobile) {
+    pixelDensity(1);
+  }
   createCanvas(window.innerWidth, window.innerHeight);
   windowResized();
   textAlign(CENTER);
