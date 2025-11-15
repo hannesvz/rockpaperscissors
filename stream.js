@@ -5,9 +5,9 @@ const path = require('path');
 const fs = require('fs');
 const http = require('http');
 
-const STREAM_WIDTH = 1280;
-const STREAM_HEIGHT = 720;
-const FPS = 30;
+const STREAM_WIDTH = parseInt(process.env.STREAM_WIDTH) || 1280;
+const STREAM_HEIGHT = parseInt(process.env.STREAM_HEIGHT) || 720;
+const FPS = parseInt(process.env.STREAM_FPS) || 30;
 const DATA_FILE = path.join(__dirname, 'scores', 'game_data.json');
 
 // Ensure scores directory exists
@@ -187,10 +187,10 @@ function initFFmpeg() {
       '-f', 'image2pipe',
       '-i', 'pipe:0',
       '-c:v', 'libx264',
-      '-preset', 'ultrafast',
-      '-b:v', '5000k',
-      '-maxrate', '5000k',
-      '-bufsize', '10000k',
+      '-preset', 'veryfast',
+      '-b:v', '3000k',
+      '-maxrate', '3500k',
+      '-bufsize', '7000k',
       '-pix_fmt', 'yuv420p',
       '-g', String(FPS * 2),
       '-framerate', String(FPS),

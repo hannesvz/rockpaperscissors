@@ -1,0 +1,4 @@
+node_modules/
+.env
+output.mp4
+scores/game_data.json
