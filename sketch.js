@@ -18,7 +18,7 @@ let win_timer_mark = 0;
 const timer_x = 20;
 const timer_y = 40;
 
-const win_timer_countdown_total = 5000; // in ms
+const win_timer_countdown_total = 10000; // in ms
 
 const max_mob_modifier = 6000;
 let winner = -1;
@@ -61,6 +61,8 @@ let game_data = {
   match: 0,
   scores: Array(mob_types.length).fill(0)
 }
+
+let death_sounds = [];
 
 class Mob {
   constructor(id, x, y, type) {
@@ -185,6 +187,7 @@ class Mob {
         // does the current target beat me?
         if (mob_types[mobs[i].type].beats.includes(this.type)) {
           // current mob beats me!
+          // play_death_sound(this.type);
           this.type = mobs[i].type;
           this.emoji = mobs[i].emoji;
           explode_here(this.hitbox_x + emoji_size / 2, this.hitbox_y + emoji_size);
@@ -192,6 +195,7 @@ class Mob {
           check_for_winners();
         }
         if (mob_types[this.type].beats.includes(mobs[i].type)) {
+          // play_death_sound(mobs[i].type);
           mobs[i].type = this.type;
           mobs[i].emoji = this.emoji;
           explode_here(this.hitbox_x + emoji_size / 2, this.hitbox_y + emoji_size);
@@ -213,6 +217,12 @@ function explode_here(x, y) {
     y: y,
     size: explosion_start_size
   })
+}
+
+function play_death_sound(mob_type) {
+  if (death_sounds[mob_type] && death_sounds[mob_type].isLoaded()) {
+    death_sounds[mob_type].play();
+  }
 }
 
 function draw_explosions() {
@@ -244,7 +254,19 @@ function check_for_winners() {
     win_timer_countdown = win_timer_countdown_total;
     // increment the score
     game_data.scores[winner] += 1;
-    storeItem('game_data', game_data);
+    game_data.match += 1;
+    console.log('Match winner! Saving data:', game_data);
+    // save to server immediately
+    fetch('/api/game-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(game_data)
+    })
+    .then(res => {
+      console.log('Game data saved successfully');
+      return res.json();
+    })
+    .catch(err => console.error('Failed to save game data:', err));
   }
 }
 
@@ -277,22 +299,30 @@ function reset_scene() {
 }
 
 function preload() {
+  // Load death sounds for each mob type
+  death_sounds[0] = loadSound('sounds/rock.mp3');
+  death_sounds[1] = loadSound('sounds/paper.mp3');
+  death_sounds[2] = loadSound('sounds/scissors.mp3');
+  
+  // Load game data from server
+  fetch('/api/game-data')
+    .then(res => res.json())
+    .then(data => {
+      game_data = data;
+    })
+    .catch(err => console.log('Using default game data'));
+  
   reset_scene();
 }
 
 function setup() {
-  frameRate(60);
+  frameRate(30);
   if (is_mobile) {
     pixelDensity(1);
   }
   createCanvas(window.innerWidth, window.innerHeight);
   windowResized();
   textAlign(CENTER);
-  // see if any data is stored in local storage and load it in if present
-  loaded_data = getItem('game_data');
-  if (loaded_data) {
-    game_data = JSON.parse(JSON.stringify(loaded_data));
-  } // else, it will be the default values set at the top
 
   // calculate scoreboard offset
   push();

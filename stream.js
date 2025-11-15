@@ -1,25 +1,150 @@
+require('dotenv').config();
 const puppeteer = require('puppeteer');
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const http = require('http');
 
-const STREAM_WIDTH = 1920;
-const STREAM_HEIGHT = 1080;
+const STREAM_WIDTH = 1280;
+const STREAM_HEIGHT = 720;
 const FPS = 30;
-const FRAME_INTERVAL = 1000 / FPS;
+const DATA_FILE = path.join(__dirname, 'scores', 'game_data.json');
 
-// YouTube RTMP URL format: rtmp://a.rtmp.youtube.com/live2/{STREAM_KEY}
-const STREAM_KEY = process.env.YOUTUBE_STREAM_KEY;
-if (!STREAM_KEY) {
-  console.error('Error: YOUTUBE_STREAM_KEY environment variable is not set');
-  process.exit(1);
+// Ensure scores directory exists
+const scoresDir = path.join(__dirname, 'scores');
+if (!fs.existsSync(scoresDir)) {
+  fs.mkdirSync(scoresDir, { recursive: true });
 }
-const YOUTUBE_RTMP_URL = `rtmp://a.rtmp.youtube.com/live2/${STREAM_KEY}`;
+
+// Initialize game data file if it doesn't exist
+if (!fs.existsSync(DATA_FILE)) {
+  const defaultData = {
+    match: 1,
+    scores: [0, 0, 0]
+  };
+  fs.writeFileSync(DATA_FILE, JSON.stringify(defaultData, null, 2));
+}
+
+// Stream configuration
+const TEST_MODE = process.env.TEST_MODE === 'true';
+const STREAM_TARGETS = [];
+
+if (TEST_MODE) {
+  console.log('Running in TEST MODE - output will be saved to output.mp4');
+  STREAM_TARGETS.push({
+    name: 'test',
+    url: 'output.mp4',
+    format: 'mp4'
+  });
+} else {
+  // YouTube
+  if (process.env.YOUTUBE_ENABLED === 'true') {
+    const YOUTUBE_KEY = process.env.YOUTUBE_STREAM_KEY;
+    if (!YOUTUBE_KEY) {
+      console.error('Error: YOUTUBE_ENABLED is true but YOUTUBE_STREAM_KEY is not set');
+      process.exit(1);
+    }
+    STREAM_TARGETS.push({
+      name: 'YouTube',
+      url: `rtmp://a.rtmp.youtube.com/live2/${YOUTUBE_KEY}`,
+      format: 'flv'
+    });
+  }
+  
+  // Twitch
+  if (process.env.TWITCH_ENABLED === 'true') {
+    const TWITCH_KEY = process.env.TWITCH_STREAM_KEY;
+    if (!TWITCH_KEY) {
+      console.error('Error: TWITCH_ENABLED is true but TWITCH_STREAM_KEY is not set');
+      process.exit(1);
+    }
+    STREAM_TARGETS.push({
+      name: 'Twitch',
+      url: `rtmp://live-iad.twitch.tv/live/${TWITCH_KEY}`,
+      format: 'flv'
+    });
+  }
+  
+  if (STREAM_TARGETS.length === 0) {
+    console.error('Error: No streaming services enabled');
+    console.error('Set YOUTUBE_ENABLED=true and/or TWITCH_ENABLED=true in .env');
+    console.error('For testing, use: TEST_MODE=true npm start');
+    process.exit(1);
+  }
+}
 
 let browser;
 let page;
-let ffmpegProcess;
-let lastFrameTime = 0;
+let ffmpegProcesses = [];
+let httpServer;
+
+function startHttpServer() {
+  return new Promise((resolve) => {
+    httpServer = http.createServer((req, res) => {
+      // API endpoints
+      if (req.url === '/api/game-data' && req.method === 'GET') {
+        try {
+          const data = fs.readFileSync(DATA_FILE, 'utf8');
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(data);
+        } catch (err) {
+          res.writeHead(500);
+          res.end('Error reading game data');
+        }
+        return;
+      }
+      
+      if (req.url === '/api/game-data' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => {
+          body += chunk.toString();
+        });
+        req.on('end', () => {
+          try {
+            const data = JSON.parse(body);
+            console.log('Saving game data:', data);
+            fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+            console.log('Game data saved to:', DATA_FILE);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: true }));
+          } catch (err) {
+            console.error('Error saving game data:', err);
+            res.writeHead(400);
+            res.end('Invalid JSON');
+          }
+        });
+        return;
+      }
+      
+      // Static files
+      const filePath = path.join(__dirname, req.url === '/' ? 'index.html' : req.url);
+      
+      fs.readFile(filePath, (err, data) => {
+        if (err) {
+          res.writeHead(404);
+          res.end('Not found');
+          return;
+        }
+        
+        const ext = path.extname(filePath);
+        const contentTypes = {
+          '.html': 'text/html',
+          '.js': 'application/javascript',
+          '.mp3': 'audio/mpeg',
+          '.json': 'application/json'
+        };
+        
+        res.writeHead(200, { 'Content-Type': contentTypes[ext] || 'application/octet-stream' });
+        res.end(data);
+      });
+    });
+    
+    httpServer.listen(8080, () => {
+      console.log('HTTP server started on http://localhost:8080');
+      resolve();
+    });
+  });
+}
 
 async function initBrowser() {
   console.log('Launching headless browser...');
@@ -43,9 +168,8 @@ async function initBrowser() {
     deviceScaleFactor: 1
   });
 
-  const htmlPath = `file://${path.resolve(__dirname, 'index.html')}`;
-  console.log(`Loading page: ${htmlPath}`);
-  await page.goto(htmlPath, { waitUntil: 'networkidle0' });
+  console.log('Loading page: http://localhost:8080');
+  await page.goto('http://localhost:8080', { waitUntil: 'networkidle0' });
   
   // Wait for p5.js to initialize
   await page.waitForFunction(() => {
@@ -56,64 +180,57 @@ async function initBrowser() {
 }
 
 function initFFmpeg() {
-  console.log(`Starting FFmpeg stream to: ${YOUTUBE_RTMP_URL}`);
-  
-  ffmpegProcess = spawn('ffmpeg', [
-    '-f', 'rawvideo',
-    '-pixel_format', 'rgba',
-    '-video_size', `${STREAM_WIDTH}x${STREAM_HEIGHT}`,
-    '-framerate', String(FPS),
-    '-i', 'pipe:0',
-    '-c:v', 'libx264',
-    '-preset', 'ultrafast',
-    '-b:v', '5000k',
-    '-maxrate', '5000k',
-    '-bufsize', '10000k',
-    '-pix_fmt', 'yuv420p',
-    '-g', String(FPS * 2),
-    '-f', 'flv',
-    YOUTUBE_RTMP_URL
-  ]);
+  STREAM_TARGETS.forEach((target) => {
+    console.log(`Starting FFmpeg stream to ${target.name}: ${target.url}`);
+    
+    const ffmpegArgs = [
+      '-f', 'image2pipe',
+      '-i', 'pipe:0',
+      '-c:v', 'libx264',
+      '-preset', 'ultrafast',
+      '-b:v', '5000k',
+      '-maxrate', '5000k',
+      '-bufsize', '10000k',
+      '-pix_fmt', 'yuv420p',
+      '-g', String(FPS * 2),
+      '-framerate', String(FPS),
+      '-an',
+      '-f', target.format,
+      target.url
+    ];
 
-  ffmpegProcess.stderr.on('data', (data) => {
-    console.log(`[FFmpeg] ${data.toString().trim()}`);
-  });
+    const process = spawn('ffmpeg', ffmpegArgs);
 
-  ffmpegProcess.on('error', (err) => {
-    console.error('FFmpeg error:', err);
-  });
+    process.stderr.on('data', (data) => {
+      console.log(`[FFmpeg ${target.name}] ${data.toString().trim()}`);
+    });
 
-  ffmpegProcess.on('close', (code) => {
-    console.log(`FFmpeg process exited with code ${code}`);
+    process.on('error', (err) => {
+      console.error(`FFmpeg ${target.name} error:`, err);
+    });
+
+    process.on('close', (code) => {
+      console.log(`FFmpeg ${target.name} exited with code ${code}`);
+    });
+
+    ffmpegProcesses.push(process);
   });
 }
 
 async function captureAndStream() {
   try {
-    const now = Date.now();
-    
-    // Throttle to target FPS
-    if (now - lastFrameTime < FRAME_INTERVAL) {
-      return;
-    }
-    lastFrameTime = now;
-
-    // Capture screenshot as buffer
+    // Capture screenshot as PNG buffer
     const screenshot = await page.screenshot({
       encoding: 'binary',
       type: 'png'
     });
 
-    // Convert PNG to raw RGBA for FFmpeg
-    const sharp = require('sharp');
-    const rawBuffer = await sharp(screenshot)
-      .raw()
-      .toBuffer();
-
-    // Write to FFmpeg stdin
-    if (ffmpegProcess && ffmpegProcess.stdin.writable) {
-      ffmpegProcess.stdin.write(rawBuffer);
-    }
+    // Write PNG to all FFmpeg processes
+    ffmpegProcesses.forEach((process) => {
+      if (process && process.stdin.writable) {
+        process.stdin.write(screenshot);
+      }
+    });
 
   } catch (error) {
     console.error('Capture error:', error);
@@ -122,27 +239,39 @@ async function captureAndStream() {
 
 async function start() {
   try {
+    await startHttpServer();
     await initBrowser();
     initFFmpeg();
 
     console.log('Starting stream capture loop...');
     console.log(`Streaming at ${STREAM_WIDTH}x${STREAM_HEIGHT} @ ${FPS}fps`);
 
-    // Capture frames continuously
-    const captureInterval = setInterval(captureAndStream, 16); // ~60fps capture, throttled to 30fps output
+    // Capture frames continuously (sketch runs at 30fps, capture every frame)
+    const captureInterval = setInterval(captureAndStream, 1000 / FPS);
 
     // Graceful shutdown
     process.on('SIGINT', async () => {
       console.log('\nShutting down...');
       clearInterval(captureInterval);
       
-      if (ffmpegProcess) {
-        ffmpegProcess.stdin.end();
-        await new Promise(resolve => ffmpegProcess.on('close', resolve));
-      }
+      // Close all FFmpeg processes
+      ffmpegProcesses.forEach((proc) => {
+        if (proc) {
+          proc.stdin.end();
+        }
+      });
+      
+      // Wait for all processes to close
+      await Promise.all(ffmpegProcesses.map(proc => 
+        new Promise(resolve => proc.on('close', resolve))
+      ));
       
       if (browser) {
         await browser.close();
+      }
+      
+      if (httpServer) {
+        httpServer.close();
       }
       
       process.exit(0);

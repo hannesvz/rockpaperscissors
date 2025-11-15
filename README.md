@@ -11,14 +11,34 @@ Headless p5.js sketch that streams a rock-paper-scissors battle simulation direc
 npm install
 ```
 
-2. Get your YouTube Stream Key:
-   - Go to YouTube Studio → Create → Go Live
-   - Copy your Stream Key from the Stream Settings
-
-3. Run the stream:
+2. Configure `.env` file:
 ```bash
-YOUTUBE_STREAM_KEY="your_stream_key_here" npm start
+cp .env.example .env
 ```
+
+3. Edit `.env` with your settings:
+```
+YOUTUBE_ENABLED=true
+YOUTUBE_STREAM_KEY=your_youtube_key
+
+TWITCH_ENABLED=false
+TWITCH_STREAM_KEY=your_twitch_key
+
+TEST_MODE=false
+```
+
+4. Run the stream:
+```bash
+npm start
+```
+
+### Configuration
+
+- `YOUTUBE_ENABLED` - Enable/disable YouTube streaming (true/false)
+- `YOUTUBE_STREAM_KEY` - Your YouTube stream key
+- `TWITCH_ENABLED` - Enable/disable Twitch streaming (true/false)
+- `TWITCH_STREAM_KEY` - Your Twitch stream key
+- `TEST_MODE` - Save to `output.mp4` instead of streaming (true/false)
 
 ### Docker (Recommended for Production)
 
@@ -29,8 +49,39 @@ docker build -t rps-stream .
 
 2. Run the container:
 ```bash
-docker run -e YOUTUBE_STREAM_KEY="your_stream_key_here" rps-stream
+docker run \
+  -e YOUTUBE_ENABLED=true \
+  -e YOUTUBE_STREAM_KEY="your_youtube_key" \
+  -e TWITCH_ENABLED=false \
+  -e TWITCH_STREAM_KEY="your_twitch_key" \
+  rps-stream
 ```
+
+### Data Storage
+
+Game data (match count and scores) is stored in `scores/game_data.json` and persists between runs.
+
+**Docker with persistent scores (YouTube only):**
+```bash
+docker run \
+  -v /path/to/scores:/app/scores \
+  -e YOUTUBE_ENABLED=true \
+  -e YOUTUBE_STREAM_KEY="your_youtube_key" \
+  rps-stream
+```
+
+**Docker with both YouTube and Twitch:**
+```bash
+docker run \
+  -v /path/to/scores:/app/scores \
+  -e YOUTUBE_ENABLED=true \
+  -e YOUTUBE_STREAM_KEY="your_youtube_key" \
+  -e TWITCH_ENABLED=true \
+  -e TWITCH_STREAM_KEY="your_twitch_key" \
+  rps-stream
+```
+
+The scores directory will be created automatically if it doesn't exist. If `game_data.json` is deleted, it will be recreated with match 1 and all scores at 0.
 
 ## How It Works
 
@@ -47,6 +98,16 @@ docker run -e YOUTUBE_STREAM_KEY="your_stream_key_here" rps-stream
 - `BITRATE`: 5000k (kbps)
 
 Adjust these in `stream.js` if needed.
+
+## Testing Locally
+
+Before you have a YouTube Stream Key, test the setup by recording to a local MP4 file:
+
+```bash
+TEST_MODE=true npm start
+```
+
+This will create an `output.mp4` file in the project directory. Let it run for a few seconds, then press `Ctrl+C` to stop. You can then play the video to verify everything is working.
 
 ## Troubleshooting
 

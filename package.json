@@ -8,8 +8,8 @@
     "dev": "node stream.js"
   },
   "dependencies": {
-    "puppeteer": "^24.30.0",
-    "sharp": "^0.33.0"
+    "dotenv": "^16.0.0",
+    "puppeteer": "^24.30.0"
   },
   "engines": {
     "node": ">=18.0.0"
