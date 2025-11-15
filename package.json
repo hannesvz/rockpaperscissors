@@ -1,0 +1,17 @@
+{
+  "name": "rps-youtube-stream",
+  "version": "1.0.0",
+  "description": "Rock Paper Scissors battle streamed to YouTube",
+  "main": "stream.js",
+  "scripts": {
+    "start": "node stream.js",
+    "dev": "node stream.js"
+  },
+  "dependencies": {
+    "puppeteer": "^24.30.0",
+    "sharp": "^0.33.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
